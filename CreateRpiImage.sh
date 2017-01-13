@@ -125,7 +125,7 @@ apt -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
 apt update
-apt -y install locales console-common ntp openssh-server binutils sudo parted unzip keyboard-configuration tmux
+apt -y install locales console-common ntp openssh-server binutils sudo parted git curl lua5.2 unzip keyboard-configuration tmux
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
@@ -140,6 +140,13 @@ dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 service ssh stop
 service ntp stop
+cd /tmp/
+git clone --depth 1 git://github.com/raspberrypi/firmware/
+cp -R /tmp/firmware/hardfp/opt/vc /opt/
+rm -Rf /tmp/firmware
+echo \"PATH=\\\"\\\$PATH:/opt/vc/bin:/opt/vc/sbin\\\"\" >> /etc/bash.bashrc
+echo \"/opt/vc/lib\" >> /etc/ld.so.conf.d/vcgencmd.conf
+ldconfig
 rm -f third-stage
 " > third-stage
 chmod +x third-stage
@@ -285,7 +292,7 @@ echo \"************************************************************\"
 echo \"************************************************************\"
 echo \"************************ Moin, moin ************************\"
 echo \"************************************************************\"
-echo \"************************************************************\"" > scripts/firstStart.sh
+echo \"************************************************************\"" > firstStart.sh
 echo "echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
@@ -296,16 +303,17 @@ fi
 insserv tmpfslog.sh
 echo \"Updating your system...\"
 apt update
-apt -y upgrade" >> scripts/firstStart.sh
+apt -y upgrade" >> firstStart.sh
 echo "echo \"Starting raspi-config...\"
+PATH=\"\$PATH:/opt/vc/bin:/opt/vc/sbin\"
 raspi-config
-rm /scripts/firstStart.sh
+rm /firstStart.sh
 echo \"Rebooting...\"
-reboot" >> scripts/firstStart.sh
-chown root:root scripts/firstStart.sh
-chmod 755 scripts/firstStart.sh
+reboot" >> firstStart.sh
+chown root:root firstStart.sh
+chmod 755 firstStart.sh
 
-echo "sudo /scripts/firstStart.sh" >> home/pi/.bashrc
+echo "sudo /firstStart.sh" >> home/pi/.bashrc
 #End first-start script
 
 #Bash profile
@@ -337,6 +345,7 @@ fi" > home/pi/.bash_profile
 
 echo "#!/bin/bash
 apt-get clean
+rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 rm -f cleanup
 " > cleanup
 chmod +x cleanup
