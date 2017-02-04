@@ -340,7 +340,7 @@ EOC
     rm -f /partstageone
     touch /partstagetwo
 
-    echo -n "Rebooting in 3... " && sleep 1 && echo -n "2... " && sleep 1 && echo -n "1... " && sleep 1
+    /bin/bash -c 'echo "Rebooting in" && echo "3..." && sleep 1 && echo "2..." && sleep 1 && echo "1..." && sleep 1' | dialog --title "Partition setup" --progressbox "Reboot" $TTY_Y $TTY_X
     reboot
 }
 
@@ -402,21 +402,31 @@ while [ $result -ne 0 ]; do
     result=$?
 done
 
-echo "Generating new SSH host keys. This might take a while."
+TTY_X=$(($(stty size | awk '{print $2}')-6))
+TTY_Y=$(($(stty size | awk '{print $1}')-6))
 rm /etc/ssh/ssh_host* >/dev/null
-ssh-keygen -A >/dev/null
-echo "Updating your system..."
-apt update
-[ $? -ne 0 ] && mount -o remount,rw / && apt update
-[ $? -ne 0 ] && mount -o remount,rw / && apt update
+ssh-keygen -A | dialog --title "System setup" --progressbox "Generating new SSH host keys. This might take a while." $TTY_Y $TTY_X
+
+TTY_X=$(($(stty size | awk '{print $2}')-6))
+TTY_Y=$(($(stty size | awk '{print $1}')-6))
+apt update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
+
+[ $? -ne 0 ] && mount -o remount,rw / && apt update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
+[ $? -ne 0 ] && mount -o remount,rw / && apt update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
 [ $? -ne 0 ] && exit 1
-apt -y upgrade
+
+TTY_X=$(($(stty size | awk '{print $2}')-6))
+TTY_Y=$(($(stty size | awk '{print $1}')-6))
+apt-get -y dist-upgrade | dialog --title "System update (2/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
+
 echo "Starting raspi-config..."
 PATH="$PATH:/opt/vc/bin:/opt/vc/sbin"
 raspi-config
 rm /firstStart.sh
 sed -i '$ d' /home/pi/.bashrc >/dev/null
-echo -n "Rebooting in 3... " && sleep 1 && echo -n "2... " && sleep 1 && echo -n "1... " && sleep 1
+TTY_X=$(($(stty size | awk '{print $2}')-6))
+TTY_Y=$(($(stty size | awk '{print $1}')-6))
+/bin/bash -c 'echo "Rebooting in" && echo "3..." && sleep 1 && echo "2..." && sleep 1 && echo "1..." && sleep 1' | dialog --title "Setup finished" --progressbox "Reboot" $TTY_Y $TTY_X
 reboot
 EOF
 chown root:root $rootfs/firstStart.sh
