@@ -27,7 +27,7 @@ fi
 echo "Creating image..."
 mkdir -p $buildenv
 image="${buildenv}/rpi_light_ssh_${deb_release}_${mydate}_readonly.img"
-dd if=/dev/zero of=$image bs=1MB count=1024
+dd if=/dev/zero of=$image bs=1MB count=2000
 [ $? -ne 0 ] && exit 1
 device=`losetup -f --show $image`
 [ $? -ne 0 ] && exit 1
@@ -93,6 +93,7 @@ echo "dwc_otg.lpm_enable=0 console=ttyUSB0,115200 console=tty1 kgdboc=ttyUSB0,11
 
 rm -f $rootfs/etc/fstab
 cat > "$rootfs/etc/fstab" <<'EOF'
+proc            /proc                       proc            defaults                                                            0       0
 /dev/mmcblk0p1  /boot                       vfat            defaults,noatime,ro                                                 0       2
 /dev/mmcblk0p2  /                           ext4            defaults,noatime,ro                                                 0       1
 tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=20M                                  0       0
@@ -109,7 +110,7 @@ echo "auto lo
 iface lo inet loopback
 iface lo inet6 loopback
 
-auto eth0
+allow-hotplug eth0
 iface eth0 inet dhcp
 iface eth0 inet6 auto
 " > etc/network/interfaces
@@ -119,7 +120,8 @@ echo "console-common    console-data/keymap/policy      select  Select keymap fr
 console-common  console-data/keymap/full        select  us
 " > debconf.set
 
-echo "#!/bin/bash
+cat > "$rootfs/third-stage" <<'EOF'
+#!/bin/bash
 set -x
 debconf-set-selections /debconf.set
 rm -f /debconf.set
@@ -137,10 +139,10 @@ mkdir -p /lib/modules/$(uname -r)
 rpi-update
 rm -Rf /boot.bak
 useradd --create-home --shell /bin/bash --user-group pi
-echo \"pi:raspberry\" | chpasswd
-echo \"root:raspberry\" | chpasswd
-echo \"pi ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers
-sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
+echo "pi:raspberry" | chpasswd
+echo "root:raspberry" | chpasswd
+echo "pi ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+sed -i -e 's/KERNEL!="eth*|/KERNEL!="/' /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 service ssh stop
@@ -149,11 +151,11 @@ cd /tmp/
 git clone --depth 1 git://github.com/raspberrypi/firmware/
 cp -R /tmp/firmware/hardfp/opt/vc /opt/
 rm -Rf /tmp/firmware
-echo \"PATH=\\\"\\\$PATH:/opt/vc/bin:/opt/vc/sbin\\\"\" >> /etc/bash.bashrc
-echo \"/opt/vc/lib\" >> /etc/ld.so.conf.d/vcgencmd.conf
+echo "PATH=\"\$PATH:/opt/vc/bin:/opt/vc/sbin\"" >> /etc/bash.bashrc
+echo "/opt/vc/lib" >> /etc/ld.so.conf.d/vcgencmd.conf
 ldconfig
-" > $rootfs/third-stage
-chmod +x third-stage
+EOF
+chmod +x $rootfs/third-stage
 LANG=C chroot $rootfs /third-stage
 rm -f $rootfs/third-stage
 
@@ -217,6 +219,7 @@ systemctl enable setup-tmpfs
 EOF
 chmod +x $rootfs/fourth-stage
 LANG=C chroot $rootfs /fourth-stage
+rm $rootfs/fourth-stage
 
 #Install raspi-config
 wget https://raw.githubusercontent.com/RPi-Distro/raspi-config/master/raspi-config
@@ -302,8 +305,8 @@ stage_one()
     TTY_Y=$(($(stty size | awk '{print $1}')-6))
     rootpartitionsize=""
     while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]]; do
-        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 1 GB." $TTY_Y $TTY_X "2")
-        if ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]]; then
+        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB." $TTY_Y $TTY_X "2")
+        if ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -lt 2 ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." $TTY_Y $TTY_X
         fi
     done
