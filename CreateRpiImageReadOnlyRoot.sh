@@ -98,6 +98,7 @@ cat > "$rootfs/etc/fstab" <<'EOF'
 tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=20M                                  0       0
 tmpfs           /var/log                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
 tmpfs           /var/tmp                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
+#tmpfs           /var/<your directory>       tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
 EOF
 
 #Setup network settings
@@ -301,7 +302,7 @@ stage_one()
     TTY_Y=$(($(stty size | awk '{print $1}')-6))
     rootpartitionsize=""
     while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]]; do
-        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of root partition in gigabytes. The minimum partition size is 1 GB." $TTY_Y $TTY_X "2")
+        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 1 GB." $TTY_Y $TTY_X "2")
         if ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." $TTY_Y $TTY_X
         fi
@@ -311,7 +312,7 @@ stage_one()
     TTY_Y=$(($(stty size | awk '{print $1}')-6))
     datapartitionsize=""
     while [ -z $datapartitionsize ] || ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; do
-        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of data partition in gigabytes." $TTY_Y $TTY_X "2")
+        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes." $TTY_Y $TTY_X "2")
         if ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; then
             dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." $TTY_Y $TTY_X
         fi
@@ -433,6 +434,24 @@ echo \"\$(tput bold)\$(tput setaf 7)Moin, moin
 \`uname -srmo\`
 Uptime: \${UPTIME}
 \$(tput sgr0)\"
+
+echo \"\"
+echo \"* To change data on the root partition (e. g. to update the system),\"
+echo \"  enter:\"
+echo \"\"
+echo \"  mount -o remount,rw /\"
+echo \"\"
+echo \"  When you are done, execute\"
+echo \"\"
+echo \"  mount -o remount,ro /\"
+echo \"\"
+echo \"  to make the root partition readonly again.\"
+echo \"* You can store data on \\\"/data\\\". It is recommended to only backup\"
+echo \"  data to this directory. During operation data should be written to a\"
+echo \"  temporary file system. By default these are \\\"/var/log\\\" and \"
+echo \"  \\\"/var/tmp\\\". You can add additional mounts in \\\"/etc/fstab\\\".\"
+echo \"* Remember to backup all data to \\\"/data\\\" before rebooting.\"
+echo \"\"
 
 # if running bash
 if [ -n \"\$BASH_VERSION\" ]; then
