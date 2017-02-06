@@ -301,23 +301,19 @@ cat > "$rootfs/setupPartitions.sh" <<-'EOF'
 
 stage_one()
 {
-    TTY_X=$(($(stty size | awk '{print $2}')-6))
-    TTY_Y=$(($(stty size | awk '{print $1}')-6))
     rootpartitionsize=""
     while [ -z $rootpartitionsize ] || ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]]; do
-        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB." $TTY_Y $TTY_X "2")
+        rootpartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter new size of readonly root partition in gigabytes. The minimum partition size is 2 GB. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $rootpartitionsize =~ ^[1-9][0-9]*$ ]] || [[ $rootpartitionsize -lt 2 ]]; then
-            dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." $TTY_Y $TTY_X
+            dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
     done
 
-    TTY_X=$(($(stty size | awk '{print $2}')-6))
-    TTY_Y=$(($(stty size | awk '{print $1}')-6))
     datapartitionsize=""
     while [ -z $datapartitionsize ] || ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; do
-        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes." $TTY_Y $TTY_X "2")
+        datapartitionsize=$(dialog --stdout --title "Partitioning" --no-tags --no-cancel --inputbox "Enter size of writeable data partition in gigabytes. We recommend only using as much space as really necessary so damaged sectors can be placed outside of the used space. It is also recommended to use a SD card as large as possible." 15 50 "2")
         if ! [[ $datapartitionsize =~ ^[1-9][0-9]*$ ]]; then
-            dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." $TTY_Y $TTY_X
+            dialog --title "Partitioning" --msgbox "Please enter a valid size in gigabytes (without unit). E. g. \"2\" or \"4\". Not \"2G\"." 10 50
         fi
     done
 
@@ -340,13 +336,15 @@ EOC
     rm -f /partstageone
     touch /partstagetwo
 
-    /bin/bash -c 'echo "Rebooting in" && echo "3..." && sleep 1 && echo "2..." && sleep 1 && echo "1..." && sleep 1' | dialog --title "Partition setup" --progressbox "Reboot" $TTY_Y $TTY_X
+    dialog --no-cancel --stdout --title "Partition setup" --no-tags --pause "Rebooting in 10 seconds..." 10 50 10
     reboot
 }
 
 stage_two()
 {
-    mkfs.ext4 -F /dev/mmcblk0p3
+    TTY_X=$(($(stty size | awk '{print $2}')-6))
+    TTY_Y=$(($(stty size | awk '{print $1}')-6))
+    mkfs.ext4 -F /dev/mmcblk0p3 | dialog --title "Partition setup" --progressbox "Creating data partition..." $TTY_Y $TTY_X
 
     sed -i '/\/dev\/mmcblk0p2/a\
 \/dev\/mmcblk0p3  \/data                       ext4            defaults,noatime,commit=600             0       1' /etc/fstab
@@ -386,34 +384,41 @@ if [ -f /partstageone ] || [ -f /partstagetwo ]; then
 fi
 rm -f /setupPartitions.sh
 
-echo "Please enter a new password for user \"pi\":"
-result=1
-while [ $result -ne 0 ]; do
-    mount -o remount,rw /
-    passwd pi
-    result=$?
-done
-echo ""
-echo "Please enter a new password for user \"root\":"
-result=1
-while [ $result -ne 0 ]; do
-    mount -o remount,rw /
-    passwd root
-    result=$?
-done
+password1=""
+password2=""
+while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
+    while [[ -z $password1 ]]; do
+        password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"pi\"" 10 50)
+    done
+    password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
 
-TTY_X=$(($(stty size | awk '{print $2}')-6))
-TTY_Y=$(($(stty size | awk '{print $1}')-6))
+    mount -o remount,rw /
+    echo -e "${password1}\n${password2}" | passwd pi
+done
+unset password1
+unset passowrd2
+
+password1=""
+password2=""
+while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
+    while [[ -z $password1 ]]; do
+        password1=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter a new password for user \"root\"" 10 50)
+    done
+    password2=$(dialog --stdout --title "New passwords" --no-tags --no-cancel --insecure --passwordbox "Please enter the same password again" 10 50)
+
+    mount -o remount,rw /
+    echo -e "${password1}\n${password2}" | passwd root
+done
+unset password1
+unset passowrd2
+
 rm /etc/ssh/ssh_host* >/dev/null
-ssh-keygen -A | dialog --title "System setup" --progressbox "Generating new SSH host keys. This might take a while." $TTY_Y $TTY_X
+ssh-keygen -A | dialog --title "System setup" --progressbox "Generating new SSH host keys. This might take a while." 10 50
 
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
-apt update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
-
-[ $? -ne 0 ] && mount -o remount,rw / && apt update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
-[ $? -ne 0 ] && mount -o remount,rw / && apt update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
-[ $? -ne 0 ] && exit 1
+apt-get update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
+[ $? -ne 0 ] && mount -o remount,rw / && apt-get update | dialog --title "System update (1/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
 
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
@@ -424,9 +429,7 @@ PATH="$PATH:/opt/vc/bin:/opt/vc/sbin"
 raspi-config
 rm /firstStart.sh
 sed -i '$ d' /home/pi/.bashrc >/dev/null
-TTY_X=$(($(stty size | awk '{print $2}')-6))
-TTY_Y=$(($(stty size | awk '{print $1}')-6))
-/bin/bash -c 'echo "Rebooting in" && echo "3..." && sleep 1 && echo "2..." && sleep 1 && echo "1..." && sleep 1' | dialog --title "Setup finished" --progressbox "Reboot" $TTY_Y $TTY_X
+dialog --no-cancel --stdout --title "Setup finished" --no-tags --pause "Rebooting in 10 seconds..." 10 50 10
 reboot
 EOF
 chown root:root $rootfs/firstStart.sh
