@@ -114,6 +114,11 @@ allow-hotplug eth0
 iface eth0 inet dhcp
 iface eth0 inet6 auto
 " > etc/network/interfaces
+
+echo "208.67.222.222
+208.67.220.220
+2620:0:ccc::2
+2620:0:ccd::2" > etc/resolv.conf
 #End network settings
 
 echo "console-common    console-data/keymap/policy      select  Select keymap from full list
@@ -401,7 +406,7 @@ while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
     fi
 done
 unset password1
-unset passowrd2
+unset password2
 
 password1=""
 password2=""
@@ -420,7 +425,7 @@ while [[ -z $password1 ]] || [[ $password1 != $password2 ]]; do
     fi
 done
 unset password1
-unset passowrd2
+unset password2
 
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A | dialog --title "System setup" --progressbox "Generating new SSH host keys. This might take a while." 10 50
