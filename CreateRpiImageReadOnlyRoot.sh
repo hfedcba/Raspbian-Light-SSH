@@ -84,8 +84,7 @@ LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
 mount $bootp $bootfs
 [ $? -ne 0 ] && exit 1
 
-echo "deb $deb_local_mirror $deb_release main contrib non-free rpi
-" > etc/apt/sources.list
+echo "deb $deb_local_mirror $deb_release main contrib non-free rpi" > etc/apt/sources.list
 
 echo "blacklist i2c-bcm2708" > $rootfs/etc/modprobe.d/raspi-blacklist.conf
 
@@ -103,8 +102,7 @@ tmpfs           /var/tmp                    tmpfs           defaults,nosuid,mode
 EOF
 
 #Setup network settings
-echo "raspberrypi" > etc/hostname
-echo "127.0.0.1       localhost raspberrypi
+echo "127.0.0.1       localhost
 ::1             localhost ip6-localhost ip6-loopback
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
@@ -117,6 +115,14 @@ iface lo inet6 loopback
 allow-hotplug eth0
 iface eth0 inet dhcp
 iface eth0 inet6 auto
+
+allow-hotplug wlan0
+iface wlan0 inet manual
+    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
+
+allow-hotplug wlan1
+iface wlan1 inet manual
+    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
 " > etc/network/interfaces
 
 echo "nameserver 208.67.222.222
@@ -140,8 +146,13 @@ cat /etc/apt/sources.list
 apt -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
+echo "deb http://archive.raspberrypi.org/debian/ jessie main ui" > /etc/apt/sources.list.d/raspi.list
+wget http://archive.raspbian.org/raspbian.public.key && apt-key add raspbian.public.key && rm raspbian.public.key
+wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key && apt-key add raspberrypi.gpg.key && rm raspberrypi.gpg.key
 apt update
-apt -y install locales console-common ntp openssh-server binutils sudo parted git curl lua5.2 unzip keyboard-configuration tmux dialog whiptail
+apt -y install libraspberrypi0 libraspberrypi-bin locales console-common ntp openssh-server binutils sudo parted git curl lua5.2 unzip keyboard-configuration tmux dialog whiptail
+# Wireless packets
+apt -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 libraspberrypi0 libraspberrypi-bin wireless-tools wpasupplicant
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
@@ -386,6 +397,12 @@ echo "************************************************************"
 mount -o remount,rw /
 
 export NCURSES_NO_UTF8_ACS=1
+
+MAC="homegearpi-""$( sed "s/^.*macaddr=[0-9A-F:]\{9\}\([0-9A-F:]*\) .*$/\1/;s/:/-/g" /proc/cmdline )"
+echo "$MAC" > "/etc/hostname"
+CURRENT_HOSTNAME=$(cat /proc/sys/kernel/hostname)
+sed -i "s/127.0.0.1       localhost/127.0.0.1       localhost $MAC/g" /etc/hosts
+hostname $MAC
 
 /setupPartitions.sh
 if [ -f /partstageone ] || [ -f /partstagetwo ]; then

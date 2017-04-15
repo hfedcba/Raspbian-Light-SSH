@@ -108,9 +108,17 @@ echo "auto lo
 iface lo inet loopback
 iface lo inet6 loopback
 
-auto eth0
+allow-hotplug eth0
 iface eth0 inet dhcp
 iface eth0 inet6 auto
+
+allow-hotplug wlan0
+iface wlan0 inet manual
+    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
+
+allow-hotplug wlan1
+iface wlan1 inet manual
+    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
 " > etc/network/interfaces
 
 echo "nameserver 208.67.222.222
@@ -133,8 +141,13 @@ cat /etc/apt/sources.list
 apt -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
+echo \"deb http://archive.raspberrypi.org/debian/ jessie main ui\" > /etc/apt/sources.list.d/raspi.list
+wget http://archive.raspbian.org/raspbian.public.key && apt-key add raspbian.public.key && rm raspbian.public.key
+wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key && apt-key add raspberrypi.gpg.key && rm raspberrypi.gpg.key
 apt update
-apt -y install locales console-common ntp openssh-server binutils sudo parted git curl lua5.2 unzip keyboard-configuration tmux
+apt -y install libraspberrypi0 libraspberrypi-bin  locales console-common ntp openssh-server binutils sudo parted git curl lua5.2 unzip keyboard-configuration tmux
+# Wireless packets
+apt -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 libraspberrypi0 libraspberrypi-bin wireless-tools wpasupplicant
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
@@ -302,6 +315,7 @@ echo \"************************************************************\"
 echo \"************************ Moin, moin ************************\"
 echo \"************************************************************\"
 echo \"************************************************************\"" > firstStart.sh
+
 echo "echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
