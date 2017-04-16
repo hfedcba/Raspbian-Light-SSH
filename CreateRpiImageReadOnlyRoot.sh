@@ -167,13 +167,6 @@ dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-reconfigure locales
 service ssh stop
 service ntp stop
-cd /tmp/
-git clone --depth 1 git://github.com/raspberrypi/firmware/
-cp -R /tmp/firmware/hardfp/opt/vc /opt/
-rm -Rf /tmp/firmware
-echo "PATH=\"\$PATH:/opt/vc/bin:/opt/vc/sbin\"" >> /etc/bash.bashrc
-echo "/opt/vc/lib" >> /etc/ld.so.conf.d/vcgencmd.conf
-ldconfig
 EOF
 chmod +x $rootfs/third-stage
 LANG=C chroot $rootfs /third-stage
@@ -313,8 +306,7 @@ chown root:root boot/config.txt
 chmod 755 boot/config.txt
 #End Raspberry Pi boot config
 
-echo "deb $deb_mirror $deb_release main contrib non-free rpi
-" > etc/apt/sources.list
+echo "deb $deb_mirror $deb_release main contrib non-free rpi" > etc/apt/sources.list
 
 cat > "$rootfs/setupPartitions.sh" <<-'EOF'
 #!/bin/bash
