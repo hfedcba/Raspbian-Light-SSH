@@ -102,7 +102,8 @@ tmpfs           /var/tmp                    tmpfs           defaults,nosuid,mode
 EOF
 
 #Setup network settings
-echo "127.0.0.1       localhost
+echo "raspberrypi" > etc/hostname
+echo "127.0.0.1       localhost raspberrypi
 ::1             localhost ip6-localhost ip6-loopback
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
@@ -394,7 +395,7 @@ MAC="raspberrypi-""$( ifconfig | grep -m 1 HWaddr | sed "s/^.*HWaddr [0-9a-f:]\{
 echo "$MAC" > "/etc/hostname"
 grep -q $MAC /etc/hosts
 if [ $? -eq 1 ]; then
-	sed -i "s/127.0.0.1       localhost/127.0.0.1       localhost $MAC/g" /etc/hosts
+	sed -i "s/127.0.0.1       localhost raspberrypi/127.0.0.1       localhost $MAC/g" /etc/hosts
 fi
 hostname $MAC
 
