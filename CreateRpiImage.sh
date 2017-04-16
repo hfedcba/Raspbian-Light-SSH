@@ -27,7 +27,7 @@ fi
 echo "Creating image..."
 mkdir -p $buildenv
 image="${buildenv}/rpi_light_ssh_${deb_release}_${mydate}.img"
-dd if=/dev/zero of=$image bs=1MB count=1000
+dd if=/dev/zero of=$image bs=1MB count=1536
 [ $? -ne 0 ] && exit 1
 device=`losetup -f --show $image`
 [ $? -ne 0 ] && exit 1

@@ -400,8 +400,10 @@ export NCURSES_NO_UTF8_ACS=1
 
 MAC="homegearpi-""$( sed "s/^.*macaddr=[0-9A-F:]\{9\}\([0-9A-F:]*\) .*$/\1/;s/:/-/g" /proc/cmdline )"
 echo "$MAC" > "/etc/hostname"
-CURRENT_HOSTNAME=$(cat /proc/sys/kernel/hostname)
-sed -i "s/127.0.0.1       localhost/127.0.0.1       localhost $MAC/g" /etc/hosts
+grep -q $MAC /etc/hosts
+if [ $? -eq 1 ]; then
+	sed -i "s/127.0.0.1       localhost/127.0.0.1       localhost $MAC/g" /etc/hosts
+fi
 hostname $MAC
 
 /setupPartitions.sh
