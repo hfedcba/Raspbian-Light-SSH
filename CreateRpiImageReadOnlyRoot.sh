@@ -390,7 +390,7 @@ mount -o remount,rw /
 
 export NCURSES_NO_UTF8_ACS=1
 
-MAC="homegearpi-""$( sed "s/^.*macaddr=[0-9A-F:]\{9\}\([0-9A-F:]*\) .*$/\1/;s/:/-/g" /proc/cmdline )"
+MAC="raspberrypi-""$( ifconfig | grep -m 1 HWaddr | sed "s/^.*HWaddr [0-9a-f:]\{9\}\([0-9a-f:]*\) .*$/\1/;s/:/-/g" )"
 echo "$MAC" > "/etc/hostname"
 grep -q $MAC /etc/hosts
 if [ $? -eq 1 ]; then
