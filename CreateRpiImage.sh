@@ -113,13 +113,17 @@ iface eth0 inet dhcp
 iface eth0 inet6 auto
 
 allow-hotplug wlan0
-iface wlan0 inet manual
-    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
-
-allow-hotplug wlan1
-iface wlan1 inet manual
-    wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
+iface wlan0 inet dhcp
+    wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
+iface wlan0 inet6 auto
 " > etc/network/interfaces
+
+mkdir -p etc/wpa_supplicant/
+echo "country=GB
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+" > etc/wpa_supplicant/wpa_supplicant.conf
+chmod 600 etc/wpa_supplicant/wpa_supplicant.conf
 
 echo "nameserver 208.67.222.222
 nameserver 208.67.220.220
